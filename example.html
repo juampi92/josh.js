@@ -1,0 +1,243 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <title>TEST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <link href='http://fonts.googleapis.com/css?family=Source+Code+Pro' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="http://code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css">
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"></script>
+  <script>Josh = {Debug: true };</script>
+  <script src="js/killring.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/readline.js"></script>
+  <script src="js/shell.js"></script>
+  <script src="js/pathhandler.js"></script>
+  <script type="text/javascript">
+    (function(root, $, _) {
+      Josh.Example = (function(root, $, _) {
+
+        var _console = (Josh.Debug && root.console) ? root.console : {
+          log: function() {}
+        };
+
+        var treeroot = buildTree();
+
+        var history = Josh.History();
+        var killring = new Josh.KillRing();
+
+        var readline = new Josh.ReadLine({
+          history: history,
+          killring: killring,
+          console: _console
+        });
+
+        var shell = Josh.Shell({
+          readline: readline,
+          history: history,
+          console: _console
+        });
+
+        var killringItemTemplate = _.template("<div><% _.each(items, function(item, i) { %><div><%- i %>&nbsp;<%- item %></div><% }); %></div>");
+
+        shell.setCommandHandler("killring", {
+
+          exec: function(cmd, args, callback) {
+
+            if (args[0] == "-c") {
+              killring.clear();
+
+              callback();
+              return;
+            }
+
+            callback(killringItemTemplate({
+              items: killring.items()
+            }));
+          }
+        });
+
+        var pathhandler = new Josh.PathHandler(shell, {
+          console: _console
+        });
+
+        pathhandler.current = treeroot;
+
+        pathhandler.getNode = function(path, callback) {
+          if (!path) {
+            return callback(pathhandler.current);
+          }
+          var parts = _.filter(path.split('/'), function(x) {
+            return x;
+          });
+          var start = ((path || '')[0] == '/') ? treeroot : pathhandler.current;
+          _console.log('start: ' + start.path + ', parts: ' + JSON.stringify(parts));
+          return findNode(start, parts, callback);
+        };
+
+        pathhandler.getChildNodes = function(node, callback) {
+          _console.log("children for " + node.name);
+          callback(node.childnodes);
+        };
+
+        function findNode(current, parts, callback) {
+          if (!parts || parts.length === 0) {
+            return callback(current);
+          }
+          if (parts[0] == ".") {
+
+          } else if (parts[0] == "..") {
+            current = current.parent;
+          } else {
+            current = _.first(_.filter(current.childnodes, function(node) {
+              return node.name == parts[0];
+            }));
+          }
+          if (!current) {
+            return callback();
+          }
+          return findNode(current, _.rest(parts), callback);
+        }
+
+        $(root).ready(function() {
+          var $element = $('#shell-panel2');
+
+          shell.setElement($element);
+
+          $element.resizable({
+            handles: "s"
+          });
+        });
+
+        Josh.Instance = {
+          Tree: treeroot,
+          Shell: shell,
+          PathHandler: pathhandler,
+          KillRing: killring
+        };
+
+        function buildTree() {
+          var fs = {
+            bin: {},
+            boot: {},
+            dev: {},
+            etc: {
+              default: {},
+              'rc.d': {},
+              sysconfig: {},
+              x11: {}
+            },
+            home: {
+              bob: {
+                video: {
+                  'firefly.m4v': {}
+                },
+                videos: {
+                  'Arrested Development': {
+                    's1e1.m4v': {}
+                  },
+                  'Better Off Ted': {
+                    's1e1.m4v': {}
+                  }
+                }
+              },
+              jane: {}
+            },
+            lib: {},
+            'lost+found': {},
+            misc: {},
+            mnt: {
+              cdrom: {},
+              sysimage: {}
+            },
+            net: {},
+            opt: {},
+            proc: {},
+            root: {},
+            sbin: {},
+            usr: {
+              x11: {},
+              bin: {},
+              include: {},
+              lib: {},
+              local: {},
+              man: {},
+              sbin: {},
+              share: {
+                doc: {}
+              },
+              src: {}
+            },
+            var: {
+              lib: {},
+              lock: {},
+              run: {},
+              log: {
+                httpd: {
+                  access_log: {},
+                  error_log: {}
+                },
+                'boot.log': {},
+                cron: {},
+                messages: {}
+              }
+            }
+          };
+
+          function build(parent, node) {
+            parent.childnodes = _.map(_.pairs(node), function(pair) {
+              var child = {
+                name: pair[0],
+                path: parent.path + "/" + pair[0],
+                parent: parent
+              };
+              build(child, pair[1]);
+              return child;
+            });
+            parent.children = _.keys(node);
+            return parent;
+          }
+          var tree = build({
+            name: "",
+            path: ""
+          }, fs);
+          tree.path = '/';
+          return tree;
+        }
+      })(root, $, _);
+    })(this, $, _);
+  </script>
+  <style type="text/css">
+    .shell-panel {
+      height: 200px;
+      width: 100%;
+      background-color: #002f05;
+      color: #00fe00;
+      padding: 20px 20px 20px 20px;
+      font-family: 'Source Code Pro';
+      overflow: scroll;
+      overflow-x: hidden;
+      overflow-y: scroll;
+      border: 1px dashed #E6EBE0;
+    }
+
+    .shell-cli .prompt {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <section>
+      <h2>Live Demo</h2>
+      <div id="shell-panel2" class="shell-panel" tabindex="0">
+        <div>Type <code>help</code> or hit <code>TAB</code> for a list of commands2.</div>
+        <div id="shell-view"></div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
