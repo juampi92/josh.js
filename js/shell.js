@@ -304,14 +304,14 @@ var Josh = Josh || {};
         var left = _.escape(text.substr(0, cursorIdx)).replace(/ /g, '&nbsp;');
         var cursor = text.substr(cursorIdx, 1);
         var right = _.escape(text.substr(cursorIdx + 1)).replace(/ /g, '&nbsp;');
-        _elements.cli.find('.prompt').html(_prompt);
-        _elements.cli.find('.input .left').html(left);
+        _elements.cli_prompt.html(_prompt);
+        _elements.cli_left.html(left);
         if (!cursor) {
-          _elements.cli.find('.input .cursor').html('&nbsp;').css('textDecoration', 'underline');
+          _elements.cli_cursor.html('&nbsp;').css('textDecoration', 'underline');
         } else {
-          _elements.cli.find('.input .cursor').text(cursor).css('textDecoration', 'underline');
+          _elements.cli_cursor.text(cursor).css('textDecoration', 'underline');
         }
-        _elements.cli.find('.input .right').html(right);
+        _elements.cli_right.html(right);
         _cursor_visible = true;
         self.scrollToBottom();
         _console.log('rendered "' + text + '" w/ cursor at ' + cursorIdx);
@@ -433,9 +433,9 @@ var Josh = Josh || {};
         _cursor_visible = !_cursor_visible;
 
         if (_cursor_visible) {
-          _elements.cli.find('.input .cursor').css('textDecoration', 'underline');
+          _elements.cli_cursor.css('textDecoration', 'underline');
         } else {
-          _elements.cli.find('.input .cursor').css('textDecoration', '');
+          _elements.cli_cursor.css('textDecoration', '');
         }
       };
 
@@ -477,7 +477,7 @@ var Josh = Josh || {};
       if (output) {
         _elements.cli.after(output);
       }
-      _elements.cli.find('.input .cursor').css('textDecoration', '');
+      _elements.cli_cursor.css('textDecoration', '');
       setCliView();
       if (_promptHandler) {
         return _promptHandler(function(prompt) {
@@ -496,6 +496,13 @@ var Josh = Josh || {};
     function setCliView(_template) {
       var template = _template || 'input_cmd';
       _elements.cli = $(self.templates[template]());
+
+      // Elements cache
+      _elements.cli_prompt = _elements.cli.find('.prompt');
+      _elements.cli_cursor = _elements.cli.find('.input .cursor');
+      _elements.cli_left = _elements.cli.find('.input .left');
+      _elements.cli_right = _elements.cli.find('.input .right');
+      // Append template to element
       _elements.view.append(_elements.cli);
     }
 
